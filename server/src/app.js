@@ -7,6 +7,7 @@ import mysteryRoutes from './routes/mysteryRoutes.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 
 const app = express();
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({ origin: env.CLIENT_URL, methods: ['GET','POST'], allowedHeaders: ['Content-Type'] }));
