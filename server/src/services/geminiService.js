@@ -193,7 +193,7 @@ async function callModel(model, prompt, schema) {
       }
 
       const delay = 2000 * Math.pow(2, attempt - 1);
-
+      console.error("Gemini error details:", error);
       console.warn(
         `Gemini temporary error. Retrying in ${delay / 1000} seconds.`
       );
