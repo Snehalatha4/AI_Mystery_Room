@@ -1,0 +1,20 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { env } from './config/env.js';
+import mysteryRoutes from './routes/mysteryRoutes.js';
+import { errorHandler, notFound } from './middleware/errors.js';
+
+const app = express();
+app.disable('x-powered-by');
+app.use(helmet());
+app.use(cors({ origin: env.CLIENT_URL, methods: ['GET','POST'], allowedHeaders: ['Content-Type'] }));
+app.use(express.json({ limit: '20kb', strict: true }));
+app.use('/api/v1', rateLimit({ windowMs: env.RATE_LIMIT_WINDOW_MS, limit: env.RATE_LIMIT_MAX * 4, standardHeaders: 'draft-7', legacyHeaders: false, message: { success: false, error: { code: 'RATE_LIMITED', message: 'Please slow down and try again soon.' } } }));
+app.get('/health', (_req, res) => res.json({ success: true, data: { status: 'ok', database: 'connected' } }));
+const generationLimiter = rateLimit({ windowMs: env.RATE_LIMIT_WINDOW_MS, limit: env.RATE_LIMIT_MAX, standardHeaders: 'draft-7', legacyHeaders: false, message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many case requests. Please try again later.' } } });
+app.use('/api/v1/mysteries', (req, res, next) => ['POST'].includes(req.method) && (req.path === '/' || req.path.endsWith('/retry')) ? generationLimiter(req, res, next) : next(), mysteryRoutes);
+app.use(notFound);
+app.use(errorHandler);
+export default app;

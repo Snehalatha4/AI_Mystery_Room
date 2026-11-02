@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { create, status, getMystery, getEvidence, getEvidenceItem, getSuspects, getTimeline, accuse, getResult, retry } from '../controllers/mysteryController.js';
+const router = Router();
+router.post('/', create);
+router.get('/:id/status', status);
+router.get('/:id', getMystery);
+router.get('/:id/evidence', getEvidence);
+router.get('/:id/evidence/:evidenceId', getEvidenceItem);
+router.get('/:id/suspects', getSuspects);
+router.get('/:id/timeline', getTimeline);
+router.post('/:id/accusations', accuse);
+router.get('/:id/results', getResult);
+router.post('/:id/retry', retry);
+export default router;
