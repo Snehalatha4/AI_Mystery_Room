@@ -59,7 +59,19 @@ function Create() {
     event.preventDefault(); setError('');
     if (form.scenario.trim().length < 30 || form.scenario.trim().length > 2000) { setError('Your story needs between 30 and 2,000 characters.'); return; }
     setBusy(true);
-    try { const created = await api.create({ ...form, scenario: form.scenario.trim(), preferences: { setting: form.setting.trim(), evidenceTypes: form.evidenceTypes } }); navigate('/mystery/' + created.id + '/loading'); }
+    try {
+  const created = await api.create({
+    scenario: form.scenario.trim(),
+    category: form.category,
+    difficulty: form.difficulty,
+    preferences: {
+      setting: form.setting.trim(),
+      evidenceTypes: form.evidenceTypes
+    }
+  });
+
+  navigate('/mystery/' + created.id + '/loading');
+}
     catch (err) { setError(err.message); setBusy(false); }
   }
   const length = form.scenario.length;
