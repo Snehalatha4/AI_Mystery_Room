@@ -158,51 +158,29 @@ function isTemporaryError(error) {
   );
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Retry temporary failures with increasing delays.
+// Make one request to a Gemini model.
+// The fallback model is handled separately below.
 async function callModel(model, prompt, schema) {
-  const maxAttempts = 3;
+  console.log(`Gemini request started: model=${model}`);
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      console.log(
-        `Gemini request: model=${model}, attempt=${attempt}/${maxAttempts}`
-      );
+  const response = await getClient().interactions.create({
+    model,
+    input: prompt,
+    response_format: {
+      type: 'text',
+      mime_type: 'application/json',
+      schema
+    },
+    generation_config: {
+      max_output_tokens: env.GEMINI_MAX_OUTPUT_TOKENS
+    },
+    store: false
+  });
 
-      const response = await getClient().interactions.create({
-        model,
-        input: prompt,
-        response_format: {
-          type: 'text',
-          mime_type: 'application/json',
-          schema
-        },
-        generation_config: {
-          max_output_tokens: env.GEMINI_MAX_OUTPUT_TOKENS
-        },
-        store: false
-      });
-
-      return parseStructuredJson(response.output_text);
-    } catch (error) {
-      if (!isTemporaryError(error) || attempt === maxAttempts) {
-        throw error;
-      }
-
-      const delay = 2000 * Math.pow(2, attempt - 1);
-      console.error("Gemini error details:", error);
-      console.warn(
-        `Gemini temporary error. Retrying in ${delay / 1000} seconds.`
-      );
-
-      await wait(delay);
-    }
-  }
+  return parseStructuredJson(response.output_text);
 }
 
+// Try the fallback model only for temporary provider errors.
 async function generateJson(prompt, schema) {
   const primaryModel = env.GEMINI_MODEL;
   const fallbackModel =
@@ -211,7 +189,6 @@ async function generateJson(prompt, schema) {
   try {
     return await callModel(primaryModel, prompt, schema);
   } catch (primaryError) {
-    // Only switch models for temporary capacity/service errors.
     if (
       !isTemporaryError(primaryError) ||
       !fallbackModel ||
@@ -286,6 +263,7 @@ Avoid real people or allegations.
 ${repairNotes ? `REPAIR THESE VALIDATION ISSUES: ${repairNotes}` : ''}
 `;
 
+  // Stage 1: Generate the case plan.
   const plan = await generateJson(planPrompt, planSchema);
 
   const evidencePrompt = `
@@ -315,6 +293,7 @@ Do not invent URLs or claim that a generated photo or playable video exists.
 A CCTV transcript must be clearly described as a simulated record.
 `;
 
+  // Stage 2: Generate the evidence package.
   const packageData = await generateJson(
     evidencePrompt,
     evidenceSchema
