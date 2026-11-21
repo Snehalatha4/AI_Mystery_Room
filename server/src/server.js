@@ -4,11 +4,6 @@ import { env } from './config/env.js';
 import { Mystery } from './models/Mystery.js';
 import { reserveGeneration, runGeneration } from './services/mysteryGenerationService.js';
 
-if (!env.GEMINI_API_KEY) {
-  console.error('Missing GEMINI_API_KEY. Copy .env.example to .env and add your server-side Google AI key.');
-  process.exit(1);
-}
-
 try {
   await mongoose.connect(env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
   const interrupted = await Mystery.find({ status: { $in: ['GENERATING','VALIDATING','GENERATING_MEDIA'] } }).select('_id').lean();

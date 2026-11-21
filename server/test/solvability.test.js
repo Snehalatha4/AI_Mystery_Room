@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { createPredefinedMystery } from '../src/services/predefinedMysteryService.js';
 import assert from 'node:assert/strict';
 import { validateCase, publicMystery, publicSuspects } from '../src/services/solvabilityService.js';
 import { createMysterySchema } from '../src/validators/mystery.js';
@@ -46,4 +47,13 @@ test('structured Gemini response parsing rejects prose and malformed JSON', () =
   assert.deepEqual(parseStructuredJson('{"case":"ready"}'), { case: 'ready' });
   assert.throws(() => parseStructuredJson('Here is the JSON: {}'), /malformed structured data/);
   assert.throws(() => parseStructuredJson(''), /empty response/);
+});
+
+
+test('predefined backup mystery passes the same validation for every difficulty', () => {
+  for (const difficulty of ['EASY', 'MEDIUM', 'HARD']) {
+    const backup = createPredefinedMystery({ scenario: 'A fictional case scenario used for backup testing.', difficulty });
+    const result = validateCase(backup, difficulty);
+    assert.equal(result.valid, true, `${difficulty}: ${result.issues.join('\n')}`);
+  }
 });

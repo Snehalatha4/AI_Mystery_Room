@@ -30,7 +30,7 @@ export async function create(req, res, next) {
 }
 
 export async function status(req, res, next) {
-  try { const mystery = await caseById(req.params.id); return send(res, { id: String(mystery._id), status: mystery.status, message: mystery.status === 'FAILED' ? mystery.failureMessage : undefined }); }
+  try { const mystery = await caseById(req.params.id); return send(res, { id: String(mystery._id), status: mystery.status, message: mystery.status === 'FAILED' ? mystery.failureMessage : undefined, provider: mystery.generationProvider || undefined }); }
   catch (error) { return next(error); }
 }
 
@@ -119,7 +119,7 @@ export async function retry(req, res, next) {
     if (mystery.retryCount >= env.MAX_CASE_RETRIES) throw new HttpError(409, 'This case has reached its retry limit. Create a new case to try again.', 'RETRY_LIMIT_REACHED');
     if (!reserveGeneration()) throw new HttpError(503, 'The investigation room is at capacity. Please try again shortly.', 'GENERATION_CAPACITY');
     let updated;
-    try { updated = await Mystery.findOneAndUpdate({ _id: mystery._id, status: 'FAILED', retryCount: { $lt: env.MAX_CASE_RETRIES } }, { $set: { status: 'GENERATING', generationAttempts: 0 }, $inc: { retryCount: 1 }, $unset: { failureMessage: 1, suspects: 1, events: 1, evidence: 1, solution: 1, resultExplanation: 1 } }, { new: true }); }
+    try { updated = await Mystery.findOneAndUpdate({ _id: mystery._id, status: 'FAILED', retryCount: { $lt: env.MAX_CASE_RETRIES } }, { $set: { status: 'GENERATING', generationAttempts: 0 }, $inc: { retryCount: 1 }, $unset: { failureMessage: 1, suspects: 1, events: 1, evidence: 1, solution: 1, resultExplanation: 1, generationProvider: 1, generationModel: 1 } }, { new: true }); }
     catch (error) { releaseGeneration(); throw error; }
     if (!updated) { releaseGeneration(); throw new HttpError(409, 'This case has already been retried or reached its retry limit.', 'RETRY_NOT_ALLOWED'); }
     setImmediate(() => runGeneration(updated._id).catch((error) => console.error('Generation task error:', error.message)));

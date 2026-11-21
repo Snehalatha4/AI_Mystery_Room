@@ -26,3 +26,5 @@
 .record-reliability svg,.form-disclaimer svg,.aside-foot svg{color:#c87980}.result-seal{border-color:#9a424b;background:rgba(112,25,37,.12)}
 .decisive-list>div span{background:#27171a;color:#ed9298}.site-header,.case-footer-note,.workspace-tabs button.active:after{--red-line:#65313a}
 @media(max-width:680px){.board-selectors{margin-left:0;width:100%;justify-content:space-between}.board-selectors label{flex:1}.board-selectors select{max-width:none;flex:1}}
+
+.backup-case-note { margin-top: 12px; padding: 10px 12px; border-left: 3px solid #c28b42; background: rgba(194,139,66,.10); color: inherit; font-size: .88rem; line-height: 1.5; }

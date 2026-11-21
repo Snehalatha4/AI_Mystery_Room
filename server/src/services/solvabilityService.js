@@ -54,7 +54,7 @@ export function validateCase(candidate, difficulty) {
 
 export function publicMystery(doc) {
   const item = doc.toObject ? doc.toObject() : doc;
-  return { id: String(item._id), title: item.title, scenario: item.scenario, category: item.category, difficulty: item.difficulty, summary: item.summary, setting: item.setting, status: item.status, createdAt: item.createdAt, suspects: publicSuspects(item.suspects), events: item.events, evidence: publicEvidence(item.evidence), accusationSubmitted: Boolean(item.accusation?.submitted) };
+  return { id: String(item._id), title: item.title, scenario: item.scenario, category: item.category, difficulty: item.difficulty, summary: item.summary, setting: item.setting, status: item.status, generationProvider: item.generationProvider || 'gemini', createdAt: item.createdAt, suspects: publicSuspects(item.suspects), events: item.events, evidence: publicEvidence(item.evidence), accusationSubmitted: Boolean(item.accusation?.submitted) };
 }
 export function publicSuspects(suspects) { return suspects.map((value) => { const suspect = value.toObject ? value.toObject() : value; const { secret, ...safe } = suspect; return safe; }); }
 export function publicEvidence(evidence) { return evidence.map((value) => { const item = value.toObject ? value.toObject() : value; const { clueRole, ...safe } = item; return safe; }); }

@@ -8,19 +8,20 @@ This repository follows [`spec.md`](./spec.md) as its source of product and tech
 
 - React, Vite, React Router and Lucide on the client.
 - Express, Mongoose and MongoDB on the server.
-- Google's official `@google/genai` JavaScript SDK for server-side structured generation.
+- Google's official `@google/genai` JavaScript SDK for server-side structured generation, plus OpenAI's HTTPS API as an optional alternate provider.
 - Zod for request validation; native Node test runner for invariant tests.
 
 ## Requirements
 
 - Node.js 20 or later.
 - MongoDB running locally or a reachable MongoDB Atlas connection.
-- A Google AI Studio Gemini API key.
+- A Google AI Studio Gemini API key (optional when using OpenAI fallback or the predefined backup).
+- An OpenAI API key is recommended for the second AI-provider fallback. OpenAI API billing is separate from a ChatGPT subscription.
 
 ## Setup
 
 1. Copy `.env.example` to `.env` in the repository root.
-2. Set `GEMINI_API_KEY` and, if needed, `MONGODB_URI`, `GEMINI_MODEL`, `GEMINI_MAX_OUTPUT_TOKENS`, `CLIENT_URL`, and `PORT`.
+2. Set `GEMINI_API_KEY` and `OPENAI_API_KEY` in the root `.env` for the full Gemini → OpenAI → predefined fallback chain. Configure `OPENAI_MODEL` if desired. If neither key is present, the server still starts and serves the predefined mystery backup.
 3. Install the workspace dependencies:
 
    ```sh
@@ -35,7 +36,7 @@ This repository follows [`spec.md`](./spec.md) as its source of product and tech
    npm run dev
    ```
 
-The React app is served at `http://localhost:5173`; the API is served at `http://localhost:5000`. The backend validates its configuration and MongoDB connection at startup. Keep the Gemini key in the root `.env`; it is never exposed through a Vite variable.
+The React app is served at `http://localhost:5173`; the API is served at `http://localhost:5000`. The backend validates its configuration and MongoDB connection at startup. At least one AI key is not required because a validated predefined mystery is always available as the final fallback. Keep the Gemini key in the root `.env`; it is never exposed through a Vite variable.
 
 ## Useful commands
 
@@ -49,7 +50,7 @@ Health check: `GET http://localhost:5000/health`.
 
 ## How generation works
 
-Case creation is asynchronous. The server creates a `GENERATING` case, asks Gemini to establish the case plan and fixed culprit, asks it to build evidence from that plan, then checks IDs, references, evidence count, decisive clues, timeline ordering and suspect exclusions before marking the case `READY`. Invalid results get a bounded retry with validation feedback. A failed case is not playable and can be retried from its loading page.
+Case creation is asynchronous. The server creates a `GENERATING` case, tries Gemini first, then OpenAI if Gemini is unavailable (including daily quota exhaustion), and finally a validated, prewritten Clocktower Ledger mystery if both AI providers fail or are not configured. Each AI-generated case is checked for IDs, references, evidence count, decisive clues, timeline ordering and suspect exclusions before it can become `READY`. The backup is clearly labeled in the investigation room and may not match the submitted scenario. Invalid AI results get a bounded repair attempt.
 
 The public case, evidence, suspect and timeline endpoints use explicit serializers. Suspect secrets and the solution stay in server-only fields. Accusation correctness is a MongoDB-backed server decision; only after it is stored does the API return the reveal. Each case accepts one accusation. Per-case retry attempts are capped by `MAX_CASE_RETRIES`; cases expire after the configured TTL.
 

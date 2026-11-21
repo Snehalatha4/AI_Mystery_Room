@@ -31,7 +31,7 @@ const mysterySchema = new mongoose.Schema({
   category: { type: String, required: true }, difficulty: { type: String, enum: ['EASY','MEDIUM','HARD'], required: true },
   summary: { type: String, required: true }, setting: String, evidencePreferences: { type: [String], default: [] },
   status: { type: String, enum: ['GENERATING','VALIDATING','GENERATING_MEDIA','READY','FAILED'], default: 'GENERATING', index: true },
-  failureMessage: String, suspects: [suspectSchema], events: [eventSchema], evidence: [evidenceSchema],
+  failureMessage: String, generationProvider: { type: String, enum: ['gemini','openai','predefined'] }, generationModel: String, suspects: [suspectSchema], events: [eventSchema], evidence: [evidenceSchema],
   solution: { type: solutionSchema, select: false },
   accusation: { submitted: { type: Boolean, default: false }, suspectId: String, explanation: String, correct: Boolean, submittedAt: Date },
   resultExplanation: { type: String, select: false }, generationAttempts: { type: Number, default: 0 }, retryCount: { type: Number, default: 0 },
