@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env.js';
 
 let client;
+let geminiQuotaCooldownUntil = 0;
 
 function getClient() {
   if (!env.GEMINI_API_KEY) {
@@ -15,7 +16,7 @@ function getClient() {
     client = new GoogleGenAI({
       apiKey: env.GEMINI_API_KEY,
       httpOptions: {
-        timeout: env.AI_REQUEST_TIMEOUT_MS
+        timeout: env.GEMINI_REQUEST_TIMEOUT_MS
       }
     });
   }
@@ -136,11 +137,31 @@ function errorMessage(error) {
   return String(error?.message || error?.error?.message || error?.response?.data?.error?.message || 'Unknown AI provider error');
 }
 
+function isDailyGeminiQuotaError(error) {
+  const message = errorMessage(error).toLowerCase();
+  return message.includes('requests per day') || message.includes('daily limit') || message.includes('per day') || (message.includes('retry in') && /\d+\s*h/.test(message));
+}
+
+async function callGeminiWithQuotaCooldown(model, prompt, schema) {
+  if (Date.now() < geminiQuotaCooldownUntil) {
+    throw new Error('Gemini daily quota is cooling down; use the next configured provider.');
+  }
+
+  try {
+    return await callGemini(model, prompt, schema);
+  } catch (error) {
+    if (isDailyGeminiQuotaError(error)) {
+      geminiQuotaCooldownUntil = Date.now() + 24 * 60 * 60 * 1000;
+      console.warn('Gemini daily quota exhausted; skipping Gemini for 24 hours.');
+    }
+    throw error;
+  }
+}
 function isTemporaryGeminiError(error) {
   const status = Number(error?.status || error?.statusCode || error?.response?.status || error?.error?.code);
   const message = errorMessage(error).toLowerCase();
   // Daily quota exhaustion is not a short-lived outage: skip Gemini retries.
-  if (message.includes('requests per day') || message.includes('daily limit') || message.includes('quota exceeded') || message.includes('per day') || (message.includes('retry in') && /\d+\s*h/.test(message))) return false;
+  if (isDailyGeminiQuotaError(error)) return false;
   return [408, 500, 502, 503, 504].includes(status) || message.includes('high demand') || message.includes('temporarily unavailable') || message.includes('overloaded') || message.includes('timeout') || message.includes('503');
 }
 
@@ -194,13 +215,13 @@ async function callOpenAI(prompt, schema) {
 async function generateJson(prompt, schema, provider) {
   if (provider === 'openai') return callOpenAI(prompt, schema);
   try {
-    return await callGemini(env.GEMINI_MODEL, prompt, schema);
+    return await callGeminiWithQuotaCooldown(env.GEMINI_MODEL, prompt, schema);
   } catch (error) {
     // Only try a second Gemini model for transient overload, never daily quota exhaustion.
     const fallbackModel = env.GEMINI_FALLBACK_MODEL;
     if (!isTemporaryGeminiError(error) || !fallbackModel || fallbackModel === env.GEMINI_MODEL) throw error;
     console.warn(`Gemini primary model unavailable; trying ${fallbackModel}.`);
-    return callGemini(fallbackModel, prompt, schema);
+    return callGeminiWithQuotaCooldown(fallbackModel, prompt, schema);
   }
 }
 

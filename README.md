@@ -50,7 +50,7 @@ Health check: `GET http://localhost:5000/health`.
 
 ## How generation works
 
-Case creation is asynchronous. The server creates a `GENERATING` case, tries Gemini first, then OpenAI if Gemini is unavailable (including daily quota exhaustion), and finally a validated, prewritten Clocktower Ledger mystery if both AI providers fail or are not configured. Each AI-generated case is checked for IDs, references, evidence count, decisive clues, timeline ordering and suspect exclusions before it can become `READY`. The backup is clearly labeled in the investigation room and may not match the submitted scenario. Invalid AI results get a bounded repair attempt.
+Case creation is asynchronous. Gemini requests use `GEMINI_REQUEST_TIMEOUT_MS` (15 seconds by default), separate from the OpenAI timeout. A daily Gemini quota error starts a 24-hour in-process cooldown and skips Gemini retries while the server remains running; generation moves to OpenAI, then to the validated, prewritten Clocktower Ledger mystery if both AI providers fail or are not configured. Each AI-generated case is checked for IDs, references, evidence count, decisive clues, timeline ordering and suspect exclusions before it can become `READY`. The backup is clearly labeled in the investigation room and may not match the submitted scenario. Invalid AI results get a bounded repair attempt.
 
 The public case, evidence, suspect and timeline endpoints use explicit serializers. Suspect secrets and the solution stay in server-only fields. Accusation correctness is a MongoDB-backed server decision; only after it is stored does the API return the reveal. Each case accepts one accusation. Per-case retry attempts are capped by `MAX_CASE_RETRIES`; cases expire after the configured TTL.
 
